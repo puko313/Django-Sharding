@@ -1,70 +1,101 @@
-Contribution: 2012-08-24 20:00
+# [Django Sharding](https://github.com/JBKahn/django-sharding)
 
-Contribution: 2012-08-24 20:01
+Django Sharding is a library and part-framework for sharding Django applications.
 
-Contribution: 2012-08-28 20:00
+It helps you to scale your applications by sharding your data across multiple databases in a consistent way.
 
-Contribution: 2012-08-28 20:01
+[![Circle CI](https://circleci.com/gh/JBKahn/django-sharding.svg?style=svg)](https://circleci.com/gh/JBKahn/django-sharding)
+[![PyPI version](https://badge.fury.io/py/django-sharding.svg)](https://badge.fury.io/py/django-sharding)
+[![PyPi downloads](https://img.shields.io/pypi/dm/django-sharding.svg)](https://crate.io/packages/django-sharding/)
+[![Coverage Status](https://coveralls.io/repos/JBKahn/django-sharding/badge.svg?branch=master&service=github)](https://coveralls.io/github/JBKahn/django-sharding?branch=master)
 
-Contribution: 2012-08-28 20:02
+### What is Sharding?
 
-Contribution: 2012-08-29 20:00
+Sharding is a way of horizontally partitioning your data by storing different rows of the same table in multiple tables across multiple databases. This helps to increase the number of connections to a given resource as well as improves read performance of your application.
 
-Contribution: 2012-08-29 20:01
+### Read The Documentation
 
-Contribution: 2012-08-29 20:02
+For information about how to setup sharding in your application, [read the documentation](http://josephkahn.io/django-sharding/).
 
-Contribution: 2012-08-30 20:00
+### Developer Experience
 
-Contribution: 2012-09-01 20:00
+I wrote this library after working on this problem for [Wave](https://www.waveapps.com) and not being able to find a library that suited our needs. What we were looking for was something that was powerful, extensible and customizable. This library was created for just that purpose and includes at least one implimentation of each part of the pipeline with room to replace any individual components.
 
-Contribution: 2012-09-02 20:00
+### Influences
 
-Contribution: 2012-09-03 20:00
+The package was influenced by my experiences at Wave as well as the help and code of my co-workers.
 
-Contribution: 2012-09-04 20:00
+### Installation
 
-Contribution: 2012-09-04 20:01
+Check out the [installation section](http://josephkahn.io/django-sharding/docs/installation/Settings.html) of the docs for basic package setup.
 
-Contribution: 2012-09-04 20:02
+### Basis Setup & Usage
 
-Contribution: 2012-09-05 20:00
+#### Sharding by User
 
-Contribution: 2012-09-05 20:01
+Select a model to shard by and open up the models.py file. Here we'll use the user model:
 
-Contribution: 2012-09-05 20:02
+```python
+from django.contrib.auth.models import AbstractUser
 
-Contribution: 2012-09-07 20:00
+from django_sharding_library.models import ShardedByMixin
 
-Contribution: 2012-09-09 20:00
 
-Contribution: 2012-09-09 20:01
+class User(AbstractUser, ShardedByMixin):
+    pass
+```
 
-Contribution: 2012-09-09 20:02
+Add that custom User to your settings file using the string class path:
 
-Contribution: 2012-09-15 20:00
+```python
+AUTH_USER_MODEL = '<app_with_user_model>.User'
+```
 
-Contribution: 2012-09-16 20:00
+#### Create Your First Sharded Model
 
-Contribution: 2012-09-16 20:01
+Define your new model, eg:
 
-Contribution: 2012-09-16 20:02
+```python
+from django.db import models
 
-Contribution: 2012-09-18 20:00
+from django_sharding_library.decorators import model_config
+from django_sharding_library.fields import TableShardedIDField
+from django_sharding_library.models import TableStrategyModel
 
-Contribution: 2012-09-18 20:01
 
-Contribution: 2012-09-19 20:00
+@model_config(database='default')
+class ShardedCarIDs(TableStrategyModel):
+    pass
 
-Contribution: 2012-09-19 20:01
 
-Contribution: 2012-09-19 20:02
+@model_config(sharded=True)
+class Car(models.Model):
+    id = TableShardedIDField(primary_key=True, source_table=ShardeCarIDs)
+    ignition_type = models.CharField(max_length=120)
+    company = models.ForeignKey('companies.Company')
 
-Contribution: 2012-09-20 20:00
+    def get_shard(self):
+        return self.company.user.shard
+```
 
-Contribution: 2012-09-21 20:00
+### Running migrations
 
-Contribution: 2012-09-21 20:01
+Run them as normal, for example:
 
-Contribution: 2012-09-21 20:02
+```
+./managy.py makemigrations <app_name>
 
+# To let django run the migrations in all the right places.
+./manage.py migrate <app>
+
+# To specify the database to run it on
+./manage.py migrate <app> --database=<database_alias>
+```
+
+### Acccessing sharded data
+
+```python
+# TODO: Update this with methods.
+shard = User.shard
+Car.objects.using(shard).get(id=123)
+```
